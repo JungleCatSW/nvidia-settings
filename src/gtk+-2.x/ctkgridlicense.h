@@ -2,7 +2,7 @@
  * nvidia-settings: A tool for configuring the NVIDIA X driver on Unix
  * and Linux systems.
  *
- * Copyright (C) 2019 NVIDIA Corporation.
+ * Copyright (C) 2020 NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -77,7 +77,7 @@ struct _CtkManageGridLicense
     char productNamevCompute[GRID_LICENSE_INFO_MAX_LENGTH];         // GRID product name fetched from nvml corresponding to the feature type '4'
 
     int licenseStatus;                                              // Current license status to be displayed on UI
-    gboolean isvComputeSupported;                                   // Check if 'NVIDIA vComputeServer' feature is supported
+    gboolean isvComputeSupported;                                   // Check if 'NVIDIA Virtual Compute Server' feature is supported
 };
 
 /*
@@ -87,7 +87,6 @@ typedef enum
 {
     NV_GRID_UNLICENSED_VGPU = 0,
     NV_GRID_UNLICENSED_VAPP,
-    NV_GRID_UNLICENSED_FEATURE_SELECTED,
     NV_GRID_LICENSE_STATUS_ACQUIRED,
     NV_GRID_LICENSE_STATUS_REQUESTING,
     NV_GRID_LICENSE_STATUS_FAILED,

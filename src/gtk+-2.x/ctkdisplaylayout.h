@@ -255,8 +255,6 @@ typedef struct nvDisplayRec {
     char               *targetIdName;   /* e.g. "DPY-3" */
     char               *randrName;      /* e.g. "VGA-1", "DVI-I-2" */
 
-    Bool                is_sdi;         /* Is an SDI display */
-
     nvModeLinePtr       modelines;      /* Modelines validated by X */
     int                 num_modelines;
 
@@ -365,7 +363,6 @@ typedef struct nvScreenRec {
     int x_offset;                     /* Offsets for relative positioning */
     int y_offset;
 
-    Bool sli;
     char *sli_mode;
     char *multigpu_mode;
     Bool no_scanout;        /* This screen has no display devices */
@@ -375,15 +372,6 @@ typedef struct nvScreenRec {
     int num_prime_displays;           /* # of associated PRIME displays */
 
 } nvScreen, *nvScreenPtr;
-
-
-
-/* GVO Mode information */
-typedef struct GvoModeDataRec {
-    unsigned int id; /* NV-CONTROL ID */
-    char *name;
-    unsigned int rate; /* Refresh rate */
-} GvoModeData;
 
 
 
@@ -409,9 +397,6 @@ typedef struct nvGpuRec {
     char *uuid;  /* e.g. "GPU-11111111-1111-1111-1111-111111111111" */
 
     gchar *pci_bus_id;
-
-    GvoModeData *gvo_mode_data; /* Information about GVO modes available */
-    unsigned int num_gvo_modes;
 
     unsigned int *flags_memory; /* Pointer to memory alloced for flags */
     unsigned int *flags; /* Array of flags queried from the X server */

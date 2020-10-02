@@ -206,7 +206,7 @@ static Bool LoadNvml(NvCtrlNvmlAttributes *nvml)
 #define GET_SYMBOL_OPTIONAL(_proc, _name)             \
     nvml->lib._proc = dlsym(nvml->lib.handle, _name); 
     
-    GET_SYMBOL_OPTIONAL(deviceGetGridLicensableFeatures, "nvmlDeviceGetGridLicensableFeatures_v2");
+    GET_SYMBOL_OPTIONAL(deviceGetGridLicensableFeatures, "nvmlDeviceGetGridLicensableFeatures_v3");
 #undef GET_SYMBOL_OPTIONAL
 
     ret = nvml->lib.init();
@@ -541,7 +541,6 @@ static ReturnStatus NvCtrlNvmlGetGPUStringAttribute(const CtrlTarget *ctrl_targe
             case NV_CTRL_STRING_GPU_CURRENT_CLOCK_FREQS:
             case NV_CTRL_STRING_GPU_UTILIZATION:
             case NV_CTRL_STRING_MULTIGPU_MODE:
-            case NV_CTRL_STRING_GVIO_FIRMWARE_VERSION: 
                 /*
                  * XXX We'll eventually need to add support for this attributes
                  *     through NVML
@@ -850,7 +849,6 @@ static ReturnStatus NvCtrlNvmlGetGPUAttribute(const CtrlTarget *ctrl_target,
             case NV_CTRL_VIDEO_ENCODER_UTILIZATION:
             case NV_CTRL_VIDEO_DECODER_UTILIZATION:
             case NV_CTRL_FRAMELOCK:
-            case NV_CTRL_IS_GVO_DISPLAY:
             case NV_CTRL_DITHERING:
             case NV_CTRL_CURRENT_DITHERING:
             case NV_CTRL_DITHERING_MODE:
@@ -1335,7 +1333,6 @@ NvCtrlNvmlGetGPUBinaryAttribute(const CtrlTarget *ctrl_target,
     if (ret == NVML_SUCCESS) {
         switch (attr) {
             case NV_CTRL_BINARY_DATA_FRAMELOCKS_USED_BY_GPU:
-            case NV_CTRL_BINARY_DATA_VCSCS_USED_BY_GPU:
             case NV_CTRL_BINARY_DATA_COOLERS_USED_BY_GPU:
             case NV_CTRL_BINARY_DATA_THERMAL_SENSORS_USED_BY_GPU:
             case NV_CTRL_BINARY_DATA_DISPLAYS_CONNECTED_TO_GPU:
@@ -1434,7 +1431,6 @@ NvCtrlNvmlGetGPUValidStringAttributeValues(int attr,
         case NV_CTRL_STRING_PERFORMANCE_MODES:
         case NV_CTRL_STRING_MULTIGPU_MODE:
         case NV_CTRL_STRING_GPU_CURRENT_CLOCK_FREQS:
-        case NV_CTRL_STRING_GVIO_FIRMWARE_VERSION: 
         case NV_CTRL_STRING_GPU_UUID:
         case NV_CTRL_STRING_GPU_UTILIZATION:
             /*
@@ -1594,7 +1590,6 @@ NvCtrlNvmlGetGPUValidAttributeValues(const CtrlTarget *ctrl_target, int attr,
             case NV_CTRL_VIDEO_ENCODER_UTILIZATION:
             case NV_CTRL_VIDEO_DECODER_UTILIZATION:
             case NV_CTRL_FRAMELOCK:
-            case NV_CTRL_IS_GVO_DISPLAY:
             case NV_CTRL_DITHERING:
             case NV_CTRL_CURRENT_DITHERING:
             case NV_CTRL_DITHERING_MODE:

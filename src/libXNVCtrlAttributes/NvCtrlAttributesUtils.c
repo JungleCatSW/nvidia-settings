@@ -34,6 +34,8 @@
 #include "NvCtrlAttributes.h"
 #include "NvCtrlAttributesPrivate.h"
 
+#include "NVCtrlLib.h"
+
 
 
 /*!
@@ -193,6 +195,9 @@ static void load_display_target_proto_names(CtrlTarget *t)
 
     t->protoNames[NV_DPY_PROTO_NAME_RANDR] =
         query_x_name(t, NV_CTRL_STRING_DISPLAY_NAME_RANDR);
+
+    t->protoNames[NV_DPY_PROTO_NAME_CONNECTOR] =
+        query_x_name(t, NV_CTRL_STRING_DISPLAY_NAME_CONNECTOR);
 }
 
 
@@ -559,9 +564,6 @@ static void load_gpu_target_relationships(CtrlTarget *target)
     add_target_relationships(target, FRAMELOCK_TARGET,
                              NV_CTRL_BINARY_DATA_FRAMELOCKS_USED_BY_GPU,
                              NV_FALSE);
-    add_target_relationships(target, VCS_TARGET,
-                             NV_CTRL_BINARY_DATA_VCSCS_USED_BY_GPU,
-                             NV_FALSE);
     add_target_relationships(target, COOLER_TARGET,
                              NV_CTRL_BINARY_DATA_COOLERS_USED_BY_GPU,
                              NV_TRUE);
@@ -595,22 +597,6 @@ static void load_framelock_target_relationships(CtrlTarget *target)
 
 
 /*!
- * Adds all associations to/from a VCS target.
- *
- * \param[in\out]  target  The VCS target to which association(s) are being
- *                         made.
- */
-
-static void load_vcs_target_relationships(CtrlTarget *target)
-{
-    add_target_relationships(target, GPU_TARGET,
-                             NV_CTRL_BINARY_DATA_GPUS_USING_VCSC,
-                             NV_FALSE);
-}
-
-
-
-/*!
  * Adds all associations to/from a target.
  *
  * \param[in\out]  target  The target to which association(s) are being made.
@@ -629,10 +615,6 @@ static void load_target_relationships(CtrlTarget *target)
 
     case FRAMELOCK_TARGET:
         load_framelock_target_relationships(target);
-        break;
-
-    case VCS_TARGET:
-        load_vcs_target_relationships(target);
         break;
 
     default:
@@ -841,6 +823,7 @@ static Bool load_system_info(CtrlSystem *system, const char *display)
     CtrlTarget *xscreenQueryTarget = NULL;
     CtrlTarget *nvmlQueryTarget = NULL;
     int i, target_type, val, len, target_count;
+    int unused;
     int *pData = NULL;
     const CtrlTargetTypeInfo *targetTypeInfo;
 
@@ -861,6 +844,9 @@ static Bool load_system_info(CtrlSystem *system, const char *display)
         nv_error_msg("Unable to find display on any available system");
         return FALSE;
     }
+
+    system->has_nv_control =
+        XNVCTRLQueryExtension(system->dpy, &unused, &unused);
 
     /* Try to initialize the NVML library */
     nvmlQueryTarget = nv_alloc_ctrl_target(system, GPU_TARGET, 0,
@@ -977,8 +963,6 @@ static Bool load_system_info(CtrlSystem *system, const char *display)
             case X_SCREEN_TARGET:
             case GPU_TARGET:
             case FRAMELOCK_TARGET:
-            case VCS_TARGET:
-            case GVI_TARGET:
             case COOLER_TARGET:
             case THERMAL_SENSOR_TARGET:
             case NVIDIA_3D_VISION_PRO_TRANSCEIVER_TARGET:

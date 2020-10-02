@@ -826,16 +826,16 @@
 
 
 /*
- * NV_CTRL_GPU_CORE_THRESHOLD reports the current GPU core slowdown
- * threshold temperature, NV_CTRL_GPU_DEFAULT_CORE_THRESHOLD and
- * NV_CTRL_GPU_MAX_CORE_THRESHOLD report the default and MAX core
- * slowdown threshold temperatures.
- *
- * NV_CTRL_GPU_CORE_THRESHOLD reflects the temperature at which the
+ * NV_CTRL_GPU_SLOWDOWN_THRESHOLD reflects the temperature at which the
  * GPU is throttled to prevent overheating.
+ *
+ * NV_CTRL_GPU_CORE_THRESHOLD, NV_CTRL_GPU_DEFAULT_CORE_THRESHOLD,
+ * and NV_CTRL_MAX_CORE_THRESHOLD are deprecated but report the
+ * same value as NV_CTRL_GPU_SLOWDOWN_THRESHOLD.
  */
 
-#define NV_CTRL_GPU_CORE_THRESHOLD                              61  /* R--G */
+#define NV_CTRL_GPU_SLOWDOWN_THRESHOLD                          61  /* R--G */
+#define NV_CTRL_GPU_CORE_THRESHOLD  NV_CTRL_GPU_SLOWDOWN_THRESHOLD
 #define NV_CTRL_GPU_DEFAULT_CORE_THRESHOLD                      62  /* R--G */
 #define NV_CTRL_GPU_MAX_CORE_THRESHOLD                          63  /* R--G */
 
@@ -1425,7 +1425,8 @@
 
 /*
  * NV_CTRL_FLATPANEL_SIGNAL - for the specified display device, report
- * whether the flat panel is driven by an LVDS, TMDS, or DisplayPort signal.
+ * whether the flat panel is driven by an LVDS, TMDS, DisplayPort, or
+ * HDMI FRL signal.
  * This attribute is only available for flat panels.
  */
 
@@ -1433,6 +1434,7 @@
 #define NV_CTRL_FLATPANEL_SIGNAL_LVDS                             0
 #define NV_CTRL_FLATPANEL_SIGNAL_TMDS                             1
 #define NV_CTRL_FLATPANEL_SIGNAL_DISPLAYPORT                      2
+#define NV_CTRL_FLATPANEL_SIGNAL_HDMI_FRL                         3
 
 
 /*
@@ -1536,9 +1538,7 @@
 #define NV_CTRL_GPU_PCIE_MAX_LINK_WIDTH  NV_CTRL_BUS_RATE
 
 /*
- * NV_CTRL_SHOW_SLI_HUD - when TRUE, OpenGL will draw information about the
- * current SLI mode.
- * Renamed this attribute to NV_CTRL_SHOW_SLI_VISUAL_INDICATOR
+ * NV_CTRL_SHOW_SLI_HUD - not supported
  */
 
 #define NV_CTRL_SHOW_SLI_HUD         NV_CTRL_SHOW_SLI_VISUAL_INDICATOR
@@ -1546,8 +1546,7 @@
 #define NV_CTRL_SHOW_SLI_HUD_TRUE    NV_CTRL_SHOW_SLI_VISUAL_INDICATOR_TRUE
 
 /*
- * NV_CTRL_SHOW_SLI_VISUAL_INDICATOR - when TRUE, OpenGL will draw information
- * about the current SLI mode.
+ * NV_CTRL_SHOW_SLI_VISUAL_INDICATOR - not supported
  */
 
 #define NV_CTRL_SHOW_SLI_VISUAL_INDICATOR                       225  /* RW-X */
@@ -2671,6 +2670,7 @@
 #define NV_CTRL_GPU_PCIE_GENERATION1                            0x00000001
 #define NV_CTRL_GPU_PCIE_GENERATION2                            0x00000002
 #define NV_CTRL_GPU_PCIE_GENERATION3                            0x00000003
+#define NV_CTRL_GPU_PCIE_GENERATION4                            0x00000004
 
 /*
  * NV_CTRL_GVI_BOUND_GPU - Returns the NV_CTRL_TARGET_TYPE_GPU target_id of
@@ -2840,8 +2840,7 @@
 #define NV_CTRL_THERMAL_SENSOR_TARGET_UNKNOWN            0xFFFFFFFF
 
 /*
- * NV_CTRL_SHOW_MULTIGPU_VISUAL_INDICATOR - when TRUE, OpenGL will
- * draw information about the current MULTIGPU mode.
+ * NV_CTRL_SHOW_MULTIGPU_VISUAL_INDICATOR - not supported
  */
 #define NV_CTRL_SHOW_MULTIGPU_VISUAL_INDICATOR                  358  /* RW-X */
 #define NV_CTRL_SHOW_MULTIGPU_VISUAL_INDICATOR_FALSE              0
@@ -3576,7 +3575,40 @@
 #define NV_CTRL_DISPLAY_VRR_ENABLED_FALSE                              0
 #define NV_CTRL_DISPLAY_VRR_ENABLED_TRUE                               1
 
-#define NV_CTRL_LAST_ATTRIBUTE NV_CTRL_DISPLAY_VRR_ENABLED
+/*
+ * NV_CTRL_GPU_SHUTDOWN_THRESHOLD reflects the temperature at which the
+ * GPU is halted to prevent overheating.
+ */
+
+#define NV_CTRL_GPU_SHUTDOWN_THRESHOLD                          432  /* R--G */
+
+/*
+ * NV_CTRL_GPU_MAX_OPERATING_THRESHOLD reflects the maximum temperature for
+ * normal GPU behavior.
+ */
+
+#define NV_CTRL_GPU_MAX_OPERATING_THRESHOLD                     433  /* R--G */
+
+/*
+ * NV_CTRL_PLATFORM_POWER_MODE - Manage Platform Power modes on systems.
+ * This attribute's setting is applied when AC power is connected.
+ *
+ * Performance            - Allows the notebook to run at higher power and
+ *                          thermal limits that are within the supported limits.
+ * Balanced               - Default experience for best performance and acoustic
+ *                          trade-off.
+ * Quiet                  - Prefers acoustic and thermal instead of performance.
+ */
+
+#define NV_CTRL_PLATFORM_POWER_MODE                             434  /* RW-G */
+#define NV_CTRL_PLATFORM_POWER_MODE_PERFORMANCE                   0
+#define NV_CTRL_PLATFORM_POWER_MODE_BALANCED                      1
+#define NV_CTRL_PLATFORM_POWER_MODE_QUIET                         2
+
+
+#define NV_CTRL_LAST_ATTRIBUTE NV_CTRL_PLATFORM_POWER_MODE
+
+
 
 /**************************************************************************/
 
@@ -4286,9 +4318,20 @@
  */
 #define NV_CTRL_STRING_PRIME_OUTPUTS_DATA                           55 /* R--- */
 
+/*
+ * NV_CTRL_STRING_DISPLAY_NAME_TYPE_CONNECTOR - Returns a name for the display
+ * device based on the physical connector ("Connector-0", "Connector-1", etc).
+ * Note that multiple display devices may have the same connector-based name:
+ * DisplayPort MultiStream devices on the same connector, or display devices
+ * representing different protocols that can be possibly driven by the same
+ * connector (e.g., DisplayPort versus TMDS protocols driven over a DisplayPort
+ * connector).
+ */
+#define NV_CTRL_STRING_DISPLAY_NAME_CONNECTOR                       56 /* R-D- */
+
 
 #define NV_CTRL_STRING_LAST_ATTRIBUTE \
-    NV_CTRL_STRING_PRIME_OUTPUTS_DATA
+    NV_CTRL_STRING_DISPLAY_NAME_CONNECTOR
 
 
 /**************************************************************************/

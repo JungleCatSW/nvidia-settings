@@ -103,7 +103,6 @@
 #define SOP_ATTRIBUTE_NAME(_ATTR_) ATTRIBUTE_NAME(_ATTR_, CTRL_ATTRIBUTE_TYPE_STRING_OPERATION)
 #define BIN_ATTRIBUTE_NAME(_ATTR_) ATTRIBUTE_NAME(_ATTR_, CTRL_ATTRIBUTE_TYPE_BINARY_DATA)
 #define COL_ATTRIBUTE_NAME(_ATTR_) ATTRIBUTE_NAME(_ATTR_, CTRL_ATTRIBUTE_TYPE_COLOR)
-#define CSC_ATTRIBUTE_NAME(_ATTR_) ATTRIBUTE_NAME(_ATTR_, CTRL_ATTRIBUTE_TYPE_SDI_CSC)
 
 
 typedef struct __NvCtrlAttributes NvCtrlAttributes;
@@ -178,7 +177,7 @@ struct __NvCtrlNvmlAttributes {
         typeof(nvmlDeviceGetMaxPcieLinkGeneration)      (*deviceGetMaxPcieLinkGeneration);
         typeof(nvmlDeviceGetMaxPcieLinkWidth)           (*deviceGetMaxPcieLinkWidth);
         typeof(nvmlDeviceGetVirtualizationMode)         (*deviceGetVirtualizationMode);
-        typeof(nvmlDeviceGetGridLicensableFeatures_v2)  (*deviceGetGridLicensableFeatures);
+        typeof(nvmlDeviceGetGridLicensableFeatures_v3)  (*deviceGetGridLicensableFeatures);
 
     } lib;
 

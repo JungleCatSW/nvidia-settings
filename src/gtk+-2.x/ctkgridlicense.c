@@ -2,7 +2,7 @@
  * nvidia-settings: A tool for configuring the NVIDIA X driver on Unix
  * and Linux systems.
  *
- * Copyright (C) 2019 NVIDIA Corporation.
+ * Copyright (C) 2020 NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,11 +52,11 @@ static const char * __manage_grid_licenses_help =
 "for GRID vGPU or Quadro Virtual Data Center Workstation on supported Tesla products.";
 static const char * __manage_grid_licenses_vcompute_help =
 "Use the Manage GRID License page to obtain licenses "
-"for GRID vGPU or Quadro Virtual Data Center Workstation or NVIDIA vComputeServer on supported Tesla products.";
+"for GRID vGPU or Quadro Virtual Data Center Workstation or NVIDIA Virtual Compute Server on supported Tesla products.";
 static const char * __grid_virtual_workstation_help =
 "Select this option to enable Quadro Virtual Data Center Workstation license.";
 static const char * __grid_virtual_compute_help =
-"Select this option to enable NVIDIA vComputeServer license.";
+"Select this option to enable NVIDIA Virtual Compute Server license.";
 static const char * __grid_vapp_help =
 "Select this option to disable the Quadro Virtual Data Center Workstation license.";
 static const char * __license_edition_help =
@@ -127,8 +127,8 @@ static gboolean licenseStateQueryFailed = FALSE;
 static void get_licensable_feature_information(gpointer user_data);
 static gboolean is_feature_supported(gpointer user_data, int featureType);
 static gboolean is_restart_required(gpointer user_data);
-static gboolean queryLicensedFeatureCode = TRUE;
-int64_t licensedFeatureCode = NV_GRID_LICENSE_FEATURE_TYPE_VAPP;
+static gboolean queryEnabledFeatureCode = TRUE;
+int64_t enabledFeatureCode = NV_GRID_LICENSE_FEATURE_TYPE_VAPP;
 
 GType ctk_manage_grid_license_get_type(void)
 {
@@ -187,6 +187,34 @@ typedef struct ConfigFileLinesRec
     char **lines;
     int nLines;
 } ConfigFileLines;
+
+/*
+ * updateFeatureTypeFromGriddConfig() - Update feature type from gridd.conf or virtualization mode
+ *
+ */
+static void updateFeatureTypeFromGriddConfig(gpointer user_data, NvGriddConfigParams *griddConfig)
+{
+    CtkManageGridLicense *ctk_manage_grid_license = CTK_MANAGE_GRID_LICENSE(user_data);
+
+    if (strcmp(griddConfig->str[NV_GRIDD_FEATURE_TYPE], "4") == 0)
+    {
+        ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_VCOMPUTE;
+    }
+    else if (strcmp(griddConfig->str[NV_GRIDD_FEATURE_TYPE], "2") == 0)
+    {
+        ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_QDWS;
+    }
+    else
+    {
+        ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_VAPP;
+    }
+
+    // Override feature type when on vGPU
+    if (ctk_manage_grid_license->license_edition_state == NV_CTRL_ATTR_NVML_GPU_VIRTUALIZATION_MODE_VGPU)
+    {
+        ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_VGPU;
+    }
+}
 
 static void FreeConfigFileLines(ConfigFileLines *pLines)
 {
@@ -807,7 +835,7 @@ static gboolean update_manage_grid_license_state_info(gpointer user_data)
     ctk_manage_grid_license->gridd_feature_type = griddFeatureType;
 
     if (licenseState == NV_GRID_UNLICENSED) {
-        queryLicensedFeatureCode = TRUE;
+        queryEnabledFeatureCode = TRUE;
         switch (ctk_manage_grid_license->feature_type) {
             case NV_GRID_LICENSE_FEATURE_TYPE_VAPP:
                 ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_VAPP;
@@ -816,19 +844,13 @@ static gboolean update_manage_grid_license_state_info(gpointer user_data)
                 }
                 break;
             case NV_GRID_LICENSE_FEATURE_TYPE_QDWS:
-                ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_FEATURE_SELECTED;
-                if (licensedFeatureCode == NV_GRID_LICENSE_FEATURE_TYPE_QDWS) {
-                    ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_REQUEST_DETAILS_QDWS;
-                }
+                ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_REQUEST_DETAILS_QDWS;
                 if (is_restart_required(ctk_manage_grid_license)) {
                     ctk_manage_grid_license->licenseStatus = NV_GRID_LICENSE_RESTART_REQUIRED_QDWS;
                 }
                 break;
             case NV_GRID_LICENSE_FEATURE_TYPE_VCOMPUTE:
-                ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_FEATURE_SELECTED;
-                if (licensedFeatureCode == NV_GRID_LICENSE_FEATURE_TYPE_VCOMPUTE) {
-                    ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_REQUEST_DETAILS_VCOMPUTE;
-                }
+                ctk_manage_grid_license->licenseStatus = NV_GRID_UNLICENSED_REQUEST_DETAILS_VCOMPUTE;
                 if (is_restart_required(ctk_manage_grid_license)) {
                     ctk_manage_grid_license->licenseStatus = NV_GRID_LICENSE_RESTART_REQUIRED_VCOMPUTE;
                 }
@@ -871,9 +893,9 @@ static gboolean update_manage_grid_license_state_info(gpointer user_data)
                 default:
                     break;
             }
-            if (queryLicensedFeatureCode == TRUE) {
+            if (queryEnabledFeatureCode == TRUE) {
                 get_licensable_feature_information(ctk_manage_grid_license);
-                queryLicensedFeatureCode = FALSE;
+                queryEnabledFeatureCode = FALSE;
             }
         }
         else if (licenseState == NV_GRID_LICENSE_REQUESTING) {
@@ -938,10 +960,6 @@ static gboolean update_manage_grid_license_state_info(gpointer user_data)
     case NV_GRID_UNLICENSED_VAPP:
           snprintf(licenseStatusMsgTmp, sizeof(licenseStatusMsgTmp), "Your system is currently configured for %s.", GRID_VIRTUAL_APPLICATIONS);
           break;
-    case NV_GRID_UNLICENSED_FEATURE_SELECTED:
-          snprintf(licenseStatusMsgTmp, sizeof(licenseStatusMsgTmp), "Your system is currently configured for %s.\n"
-             "Enter license server details and apply.", GRID_VIRTUAL_APPLICATIONS);
-          break;
     case NV_GRID_LICENSE_STATUS_ACQUIRED:
           snprintf(licenseStatusMsgTmp, sizeof(licenseStatusMsgTmp), "Your system is licensed for %s.", ctk_manage_grid_license->productName);
           break;
@@ -1005,8 +1023,8 @@ static gboolean is_restart_required(gpointer user_data)
 
     /* Once licensed, system reboot required if there is mismatch between feature type
         updated from UI/gridd.conf and feature code of the feature that is licensed on this system. */
-    if ((licensedFeatureCode) &&
-        (licensedFeatureCode != ctk_manage_grid_license->feature_type)) {
+    if ((enabledFeatureCode) &&
+        (enabledFeatureCode != ctk_manage_grid_license->feature_type)) {
         ret = TRUE;
     }
     return ret;
@@ -1095,7 +1113,7 @@ static void apply_clicked(GtkWidget *widget, gpointer user_data)
     gtk_widget_set_sensitive(ctk_manage_grid_license->btn_apply, FALSE);
     gtk_widget_set_sensitive(ctk_manage_grid_license->btn_cancel, FALSE);
 
-    if (licensedFeatureCode == NV_GRID_LICENSE_FEATURE_TYPE_VAPP) {
+    if (enabledFeatureCode == NV_GRID_LICENSE_FEATURE_TYPE_VAPP) {
         get_licensable_feature_information(ctk_manage_grid_license);
     }
 }
@@ -1109,6 +1127,10 @@ static void get_licensable_feature_information(gpointer user_data)
     nvmlGridLicensableFeatures_t *gridLicensableFeatures;
     gint ret, i;
 
+    // Add delay of 1 second to allow sometime for recently applied feature to
+    // get enabled and set corresponding properties in RM before querying them
+    sleep(1);
+
     ret = NvCtrlNvmlGetGridLicenseAttributes(ctk_manage_grid_license->target,
                                              NV_CTRL_ATTR_NVML_GPU_GRID_LICENSABLE_FEATURES,
                                              &gridLicensableFeatures);
@@ -1118,8 +1140,8 @@ static void get_licensable_feature_information(gpointer user_data)
 
     for (i = 0; i < gridLicensableFeatures->licensableFeaturesCount; i++)
     {
-        if (gridLicensableFeatures->gridLicensableFeatures[i].featureState != 0) {
-            licensedFeatureCode = gridLicensableFeatures->gridLicensableFeatures[i].featureCode;
+        if (gridLicensableFeatures->gridLicensableFeatures[i].featureEnabled != 0) {
+            enabledFeatureCode = gridLicensableFeatures->gridLicensableFeatures[i].featureCode;
 
             // Save product name of enabled feature
             strncpy(ctk_manage_grid_license->productName,
@@ -1127,9 +1149,9 @@ static void get_licensable_feature_information(gpointer user_data)
                 sizeof(ctk_manage_grid_license->productName) - 1);
             ctk_manage_grid_license->productName[sizeof(ctk_manage_grid_license->productName) - 1] = '\0';
         }
-        else if (gridLicensableFeatures->gridLicensableFeatures[i].featureState == 0) {
+        else if (gridLicensableFeatures->gridLicensableFeatures[i].featureEnabled == 0) {
             if ((ctk_manage_grid_license->feature_type == gridLicensableFeatures->gridLicensableFeatures[i].featureCode) &&
-                !licensedFeatureCode) {
+                !enabledFeatureCode) {
                 // Save product name of feature applied from UI
                 strncpy(ctk_manage_grid_license->productName,
                     gridLicensableFeatures->gridLicensableFeatures[i].productName,
@@ -1225,22 +1247,7 @@ static void update_gui_from_griddconfig(gpointer user_data)
         gtk_entry_set_text(GTK_ENTRY(ctk_manage_grid_license->txt_secondary_server_port),
                            griddConfig->str[NV_GRIDD_BACKUP_SERVER_PORT]);
         /* set default value for feature type based on the user configured parameter or virtualization mode */
-        /* Check Feature type "2" for Quadro Virtual Data Center Workstation. */
-        if (strcmp(griddConfig->str[NV_GRIDD_FEATURE_TYPE], "4") == 0) {
-            ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_VCOMPUTE;
-        }
-        else if (strcmp(griddConfig->str[NV_GRIDD_FEATURE_TYPE], "2") == 0) {
-            ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_QDWS;
-        }
-        else {
-            ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_VAPP;
-        }
-
-        /* Override feature type when on vGPU */
-        if (ctk_manage_grid_license->license_edition_state == NV_CTRL_ATTR_NVML_GPU_VIRTUALIZATION_MODE_VGPU)
-        {
-            ctk_manage_grid_license->feature_type = NV_GRID_LICENSE_FEATURE_TYPE_VGPU;
-        }
+        updateFeatureTypeFromGriddConfig(ctk_manage_grid_license, griddConfig);
 
         /* Set license edition toggle button active */
         if (ctk_manage_grid_license->radio_btn_vcompute && ctk_manage_grid_license->feature_type == NV_GRID_LICENSE_FEATURE_TYPE_VCOMPUTE) {
@@ -1616,6 +1623,12 @@ GtkWidget* ctk_manage_grid_license_new(CtrlTarget *target,
     /* set container properties for the CtkManageGridLicense widget */
 
     gtk_box_set_spacing(GTK_BOX(ctk_manage_grid_license), 5);
+
+    // Set feature type based on user configured parameter or virtualization mode
+    if (griddConfig != NULL)
+    {
+        updateFeatureTypeFromGriddConfig(ctk_manage_grid_license, griddConfig);
+    }
 
     get_licensable_feature_information(ctk_manage_grid_license);
 

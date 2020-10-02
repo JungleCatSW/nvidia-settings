@@ -601,6 +601,21 @@ static void consolidate_xinerama(CtkDisplayConfig *ctk_object,
 
 static void update_btn_apply(CtkDisplayConfig *ctk_object, Bool sensitive)
 {
+    /*
+     * Both the apply and write quit warnings are sent whenever anything changes
+     * in the display configuration so that the apply button is enabled. The
+     * apply warning is cleared when the config is applied and the button reset
+     * here. The save warning is cleared when the config is successfully saved.
+     */
+    if (sensitive) {
+        ctk_object->ctk_config->pending_config |=
+            CTK_CONFIG_PENDING_APPLY_DISPLAY_CONFIG;
+        ctk_object->ctk_config->pending_config |=
+            CTK_CONFIG_PENDING_WRITE_DISPLAY_CONFIG;
+    } else {
+        ctk_object->ctk_config->pending_config &=
+            ~CTK_CONFIG_PENDING_APPLY_DISPLAY_CONFIG;
+    }
     gtk_widget_set_sensitive(ctk_object->btn_apply, sensitive);
 
 } /* update_btn_apply() */
@@ -963,7 +978,7 @@ static GtkWidget * create_validation_dialog(CtkDisplayConfig *ctk_object)
     dialog = gtk_dialog_new_with_buttons
         ("Layout Inconsistencie(s)",
          GTK_WINDOW(gtk_widget_get_parent(GTK_WIDGET(ctk_object))),
-         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL);
+         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL, NULL);
     
     /* Main horizontal box */
     hbox = gtk_hbox_new(FALSE, 5);
@@ -1064,7 +1079,7 @@ static GtkWidget * create_validation_apply_dialog(CtkDisplayConfig *ctk_object)
          GTK_WINDOW(gtk_widget_get_parent(GTK_WIDGET(ctk_object))),
          GTK_DIALOG_MODAL |
          GTK_DIALOG_DESTROY_WITH_PARENT,
-         NULL);
+         NULL, NULL);
     ctk_object->dlg_validation_apply = dialog;
 
     /* Main horizontal box */
@@ -1530,7 +1545,7 @@ GtkWidget* ctk_display_config_new(CtrlTarget *ctrl_target,
     ctk_object->dlg_display_disable = gtk_dialog_new_with_buttons
         ("Disable Display Device",
          GTK_WINDOW(gtk_widget_get_parent(GTK_WIDGET(ctk_object))),
-         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL);
+         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL, NULL);
     ctk_object->btn_display_disable_off =
         gtk_dialog_add_button(GTK_DIALOG(ctk_object->dlg_display_disable),
                               "Remove",
@@ -3218,7 +3233,7 @@ static void setup_display_refresh_dropdown(CtkDisplayConfig *ctk_object)
             continue;
         }
 
-        name = g_strdup_printf("%0.*f Hz", (display->is_sdi ? 3 : 0),
+        name = g_strdup_printf("%0.0f Hz",
                                modeline->refresh_rate);
 
         /* Get a unique number for this modeline */
@@ -3246,7 +3261,7 @@ static void setup_display_refresh_dropdown(CtkDisplayConfig *ctk_object)
         }
 
         /* Is default refresh rate for resolution */
-        if (!ctk_object->refresh_table_len && !display->is_sdi) {
+        if (!ctk_object->refresh_table_len) {
             auto_modeline = modeline;
             g_free(name);
             name = g_strdup("Auto");
@@ -6718,7 +6733,7 @@ static void post_display_underscan_value_changed(CtkDisplayConfig *ctk_object,
                                             TRUE /* update_panning_size */);
 
     /* Enable the apply button */
-    gtk_widget_set_sensitive(ctk_object->btn_apply, TRUE);
+    update_btn_apply(ctk_object, TRUE);
 
 }
 
@@ -9503,7 +9518,12 @@ static void save_clicked(GtkWidget *widget, gpointer user_data)
     }
 
     /* Run the save dialog */
-    run_save_xconfig_dialog(ctk_object->save_xconfig_dlg);
+    if (run_save_xconfig_dialog(ctk_object->save_xconfig_dlg)) {
+
+        /* Config file written */
+        ctk_object->ctk_config->pending_config &=
+            ~CTK_CONFIG_PENDING_WRITE_DISPLAY_CONFIG;
+    }
 
 } /* save_clicked() */
 

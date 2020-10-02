@@ -101,8 +101,8 @@ static const char *__info_link_help =
 "connections, reports the bandwidth of the connection.";
 
 static const char *__info_signal_help =
-"Report whether the flat panel is driven by an LVDS, TMDS, or DisplayPort "
-"signal.";
+"Report whether the flat panel is driven by an LVDS, TMDS, DisplayPort, "
+"or HDMI FRL (fixed-rate link) signal.";
 
 static const char * __refresh_rate_help =
 "The refresh rate displays the rate at which the screen is currently "
@@ -713,6 +713,9 @@ static gboolean update_signal_info(InfoEntry *entry)
     case NV_CTRL_FLATPANEL_SIGNAL_DISPLAYPORT:
         str = "DisplayPort";
         break;
+    case NV_CTRL_FLATPANEL_SIGNAL_HDMI_FRL:
+        str = "HDMI FRL";
+        break;
     default:
         str = "Unknown";
         break;
@@ -736,7 +739,7 @@ static gboolean update_link_info(InfoEntry *entry)
     ReturnStatus ret;
     gint val;
     const char *link;
-    char tmp[32];
+    char tmp[64];
 
     ret = NvCtrlGetAttribute(ctrl_target, NV_CTRL_FLATPANEL_LINK, &val);
     if (ret != NvCtrlSuccess) {
@@ -759,11 +762,13 @@ static gboolean update_link_info(InfoEntry *entry)
             }
 
             if (val > 0) {
-                snprintf(tmp, 32, "%d lane%s @ %.2f Gbps", lanes, lanes == 1 ? "" : "s",
+                snprintf(tmp, sizeof(tmp),
+                         "%d lane%s @ %.2f Gbps", lanes, lanes == 1 ? "" : "s",
                          val * 0.27);
             } else {
-                snprintf(tmp, 32, "%d lane%s @ unknown bandwidth", lanes,
-                         lanes == 1 ? "" : "s");
+                snprintf(tmp, sizeof(tmp),
+                         "%d lane%s @ unknown bandwidth",
+                         lanes, lanes == 1 ? "" : "s");
             }
             link = tmp;
         }
